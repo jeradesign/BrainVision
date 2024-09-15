@@ -293,9 +293,9 @@ actor Renderer {
     private func updateGameState(drawable: LayerRenderer.Drawable, deviceAnchor: DeviceAnchor?) {
         /// Update any game state before rendering
 
-        let rotationAxis = SIMD3<Float>(1, 1, 0)
+        let rotationAxis = SIMD3<Float>(0, 1, 0)
         let modelRotationMatrix = matrix4x4_rotation(radians: rotation, axis: rotationAxis)
-        let modelTranslationMatrix = matrix4x4_translation(0.0, 0.0, -8.0)
+        let modelTranslationMatrix = matrix4x4_translation(0.0, 1.5, -2.0)
         let modelMatrix = modelTranslationMatrix * modelRotationMatrix
 
         let simdDeviceAnchor = deviceAnchor?.originFromAnchorTransform ?? matrix_identity_float4x4
