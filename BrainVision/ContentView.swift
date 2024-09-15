@@ -28,6 +28,10 @@ struct ContentView: View {
             switch await openImmersiveSpace(id: "ImmersiveSpace") {
             case .opened:
                 dismissWindow(id: "MainWindow")
+            case .userCancelled:
+                break
+            case .error:
+                break
             @unknown default:
                 break
             }
