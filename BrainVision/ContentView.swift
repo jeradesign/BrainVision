@@ -10,6 +10,9 @@ import RealityKit
 import RealityKitContent
 
 struct ContentView: View {
+    @Environment(AppModel.self) private var appModel
+    @Environment(\.openImmersiveSpace) private var openImmersiveSpace
+    @Environment(\.dismissWindow) private var dismissWindow
 
     var body: some View {
         VStack {
@@ -21,6 +24,15 @@ struct ContentView: View {
             ToggleImmersiveSpaceButton()
         }
         .padding()
+        .task {
+            switch await openImmersiveSpace(id: "ImmersiveSpace") {
+            case .opened:
+                dismissWindow(id: "MainWindow")
+            @unknown default:
+                break
+            }
+
+        }
     }
 }
 
