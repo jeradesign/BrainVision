@@ -233,6 +233,8 @@ actor Renderer {
             MTKTextureLoader.Option.textureStorageMode: NSNumber(value: MTLStorageMode.`private`.rawValue)
         ]
 
+        _ = DicomLoader().createDICOMTexture(for: device)
+
         return try textureLoader.newTexture(name: textureName,
                                             scaleFactor: 1.0,
                                             bundle: nil,
