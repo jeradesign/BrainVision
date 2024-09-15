@@ -50,7 +50,7 @@ actor Renderer {
     var dynamicUniformBuffer: MTLBuffer
     var pipelineState: MTLRenderPipelineState
     var depthState: MTLDepthStencilState
-    var colorMap: MTLTexture
+    var texture3D: MTLTexture
 
     let inFlightSemaphore = DispatchSemaphore(value: maxBuffersInFlight)
 
@@ -120,7 +120,7 @@ actor Renderer {
         }
 
         do {
-            colorMap = try Renderer.loadTexture(device: device, textureName: "ColorMap")
+            texture3D = try Renderer.loadTexture(device: device, textureName: "ColorMap")
         } catch {
             fatalError("Unable to load texture. Error info: \(error)")
         }
@@ -156,9 +156,9 @@ actor Renderer {
         mtlVertexDescriptor.attributes[VertexAttribute.position.rawValue].offset = 0
         mtlVertexDescriptor.attributes[VertexAttribute.position.rawValue].bufferIndex = BufferIndex.meshPositions.rawValue
 
-        mtlVertexDescriptor.attributes[VertexAttribute.texcoord.rawValue].format = MTLVertexFormat.float2
-        mtlVertexDescriptor.attributes[VertexAttribute.texcoord.rawValue].offset = 0
-        mtlVertexDescriptor.attributes[VertexAttribute.texcoord.rawValue].bufferIndex = BufferIndex.meshGenerics.rawValue
+        mtlVertexDescriptor.attributes[VertexAttribute.normal.rawValue].format = MTLVertexFormat.float3
+        mtlVertexDescriptor.attributes[VertexAttribute.normal.rawValue].offset = 0
+        mtlVertexDescriptor.attributes[VertexAttribute.normal.rawValue].bufferIndex = BufferIndex.meshGenerics.rawValue
 
         mtlVertexDescriptor.layouts[BufferIndex.meshPositions.rawValue].stride = 12
         mtlVertexDescriptor.layouts[BufferIndex.meshPositions.rawValue].stepRate = 1
@@ -203,11 +203,18 @@ actor Renderer {
 
         let metalAllocator = MTKMeshBufferAllocator(device: device)
 
-        let mdlMesh = MDLMesh.newBox(withDimensions: SIMD3<Float>(4, 4, 4),
-                                     segments: SIMD3<UInt32>(2, 2, 2),
-                                     geometryType: MDLGeometryType.triangles,
-                                     inwardNormals:false,
-                                     allocator: metalAllocator)
+//        let mdlMesh = MDLMesh.newBox(withDimensions: SIMD3<Float>(4, 4, 4),
+//                                     segments: SIMD3<UInt32>(2, 2, 2),
+//                                     geometryType: MDLGeometryType.triangles,
+//                                     inwardNormals:false,
+//                                     allocator: metalAllocator)
+        let mdlMesh = MDLMesh.newEllipsoid(withRadii: vector_float3(x: 0.5, y: 0.5, z: 0.5),
+                                           radialSegments: 128,
+                                           verticalSegments: 128,
+                                           geometryType: .triangles,
+                                           inwardNormals: false,
+                                           hemisphere: false,
+                                           allocator: metalAllocator)
 
         let mdlVertexDescriptor = MTKModelIOVertexDescriptorFromMetal(mtlVertexDescriptor)
 
@@ -215,7 +222,7 @@ actor Renderer {
             throw RendererError.badVertexDescriptor
         }
         attributes[VertexAttribute.position.rawValue].name = MDLVertexAttributePosition
-        attributes[VertexAttribute.texcoord.rawValue].name = MDLVertexAttributeTextureCoordinate
+        attributes[VertexAttribute.normal.rawValue].name = MDLVertexAttributeNormal
 
         mdlMesh.vertexDescriptor = mdlVertexDescriptor
 
@@ -226,19 +233,20 @@ actor Renderer {
                             textureName: String) throws -> MTLTexture {
         /// Load texture data with optimal parameters for sampling
 
-        let textureLoader = MTKTextureLoader(device: device)
+        return DicomLoader().createDICOMTexture(for: device)
 
-        let textureLoaderOptions = [
-            MTKTextureLoader.Option.textureUsage: NSNumber(value: MTLTextureUsage.shaderRead.rawValue),
-            MTKTextureLoader.Option.textureStorageMode: NSNumber(value: MTLStorageMode.`private`.rawValue)
-        ]
-
-        _ = DicomLoader().createDICOMTexture(for: device)
-
-        return try textureLoader.newTexture(name: textureName,
-                                            scaleFactor: 1.0,
-                                            bundle: nil,
-                                            options: textureLoaderOptions)
+//        let textureLoader = MTKTextureLoader(device: device)
+//
+//        let textureLoaderOptions = [
+//            MTKTextureLoader.Option.textureUsage: NSNumber(value: MTLTextureUsage.shaderRead.rawValue),
+//            MTKTextureLoader.Option.textureStorageMode: NSNumber(value: MTLStorageMode.`private`.rawValue)
+//        ]
+//
+//
+//        return try textureLoader.newTexture(name: textureName,
+//                                            scaleFactor: 1.0,
+//                                            bundle: nil,
+//                                            options: textureLoaderOptions)
     }
 
     private func updateDynamicBufferState() {
@@ -296,8 +304,14 @@ actor Renderer {
             let view = drawable.views[viewIndex]
             let viewMatrix = (simdDeviceAnchor * view.transform).inverse
             let projection = drawable.computeProjection(viewIndex: viewIndex)
+            let worldToObject = modelMatrix.inverse
+            let worldSpaceCameraPos = vector_float3(x: 0, y: 0, z: 2)
 
-            return Uniforms(projectionMatrix: projection, modelViewMatrix: viewMatrix * modelMatrix)
+            return Uniforms(projectionMatrix: projection,
+                            modelViewMatrix: viewMatrix * modelMatrix,
+                            worldToObject: worldToObject,
+                            worldSpaceCameraPos: worldSpaceCameraPos
+            )
         }
 
         self.uniforms[0].uniforms.0 = uniforms(forViewIndex: 0)
@@ -416,7 +430,7 @@ actor Renderer {
             }
         }
 
-        renderEncoder.setFragmentTexture(colorMap, index: TextureIndex.color.rawValue)
+        renderEncoder.setFragmentTexture(texture3D, index: TextureIndex.index3D.rawValue)
 
         for submesh in mesh.submeshes {
             renderEncoder.drawIndexedPrimitives(type: submesh.primitiveType,

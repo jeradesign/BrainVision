@@ -1,5 +1,9 @@
 //
 //  ShaderTypes.h
+//  MetalTestMac
+//
+//  Created by John Brewer on 6/27/19.
+//  Copyright © 2019 Jera Design LLC. All rights reserved.
 //
 
 //
@@ -10,36 +14,38 @@
 
 #ifdef __METAL_VERSION__
 #define NS_ENUM(_type, _name) enum _name : _type _name; enum _name : _type
-typedef metal::int32_t EnumBackingType;
+#define NSInteger metal::int32_t
 #else
 #import <Foundation/Foundation.h>
-typedef NSInteger EnumBackingType;
 #endif
 
 #include <simd/simd.h>
 
-typedef NS_ENUM(EnumBackingType, BufferIndex)
+typedef NS_ENUM(NSInteger, BufferIndex)
 {
     BufferIndexMeshPositions = 0,
     BufferIndexMeshGenerics  = 1,
     BufferIndexUniforms      = 2
 };
 
-typedef NS_ENUM(EnumBackingType, VertexAttribute)
+typedef NS_ENUM(NSInteger, VertexAttribute)
 {
     VertexAttributePosition  = 0,
-    VertexAttributeTexcoord  = 1,
+    VertexAttributeNormal  = 1,
 };
 
-typedef NS_ENUM(EnumBackingType, TextureIndex)
+typedef NS_ENUM(NSInteger, TextureIndex)
 {
     TextureIndexColor    = 0,
+    TextureIndex3D       = 1
 };
 
 typedef struct
 {
     matrix_float4x4 projectionMatrix;
     matrix_float4x4 modelViewMatrix;
+    matrix_float4x4 worldToObject;
+    vector_float3 worldSpaceCameraPos;
 } Uniforms;
 
 typedef struct
