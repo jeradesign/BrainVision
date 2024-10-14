@@ -305,8 +305,12 @@ actor Renderer {
             let viewMatrix = (simdDeviceAnchor * view.transform).inverse
             let projection = drawable.computeProjection(viewIndex: viewIndex)
             let worldToObject = modelMatrix.inverse
-            let worldSpaceCameraPos = vector_float3(x: 0, y: 0, z: 2)
-
+            var worldSpaceCameraPos = vector_float3(x: 0, y: 0, z: 2)
+            if let deviceAnchor {
+                let cameraTransform = deviceAnchor.originFromAnchorTransform * view.transform
+                let cameraPosition = cameraTransform.columns.3
+                worldSpaceCameraPos = vector_float3(x: cameraPosition.x, y: cameraPosition.y, z: cameraPosition.z)
+            }
             return Uniforms(projectionMatrix: projection,
                             modelViewMatrix: viewMatrix * modelMatrix,
                             worldToObject: worldToObject,
